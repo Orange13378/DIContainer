@@ -6,7 +6,15 @@ using Microsoft.Extensions.DependencyInjection;
 using ContainerBuilder = DIContainer.ContainerBuilder;
 using IContainer = DIContainer.IContainer;
 
+IContainerBuilder builder2 = new ContainerBuilder(new ReflectionBasedActivationBuilder());
 IContainerBuilder builder = new ContainerBuilder(new LambdaBasedActivationBuilder());
+
+var container2 = builder2
+    .RegisterTransient(typeof(Controller), typeof(Controller))
+    .RegisterScoped(typeof(IService), typeof(Service))
+    .RegisterSingleton(typeof(IAnotherService), typeof(AnotherServiceInstance))
+    .Build();
+
 var container = builder
     .RegisterTransient<IService, Service>()
     .RegisterScoped<Controller, Controller>()
@@ -14,7 +22,7 @@ var container = builder
     .Build();
 
 var scope = container.CreateScope();
-var scope2 = container.CreateScope();
+var scope2 = container2.CreateScope();
 var controller1 = scope.Resolve(typeof(Controller));
 var controller2 = scope.Resolve(typeof(Controller));
 var controller3 = scope2.Resolve(typeof(Controller));
@@ -38,7 +46,7 @@ if (controller3 != controller2)
 
 //Console.ReadLine();
 
-BenchmarkRunner.Run<ContainerBenchmark>();
+//BenchmarkRunner.Run<ContainerBenchmark>();
 
 [MemoryDiagnoser]
 public class ContainerBenchmark
