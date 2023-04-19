@@ -12,7 +12,14 @@ public class ContainerBuilder : IContainerBuilder
 
     public void Register(ServiceDescriptor descriptor)
     {
-        _descriptors.Add(descriptor);
+        if (!_descriptors.Select(x => x.ServiceType).Contains(descriptor.ServiceType))
+        {
+            _descriptors.Add(descriptor);
+        }
+        else
+        {
+            Console.WriteLine($"\nAlready have the same key: ({descriptor.ServiceType}) skip it\n");
+        }
     }
     public IContainer Build()
     {

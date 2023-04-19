@@ -5,6 +5,11 @@ public static class ContainerBuilderExtensions
     private static IContainerBuilder RegisterType(this IContainerBuilder builder, Type serviceType, Type implementationType,
         Lifetime lifetime)
     {
+        if (!serviceType.IsAssignableFrom(implementationType))
+        {
+            throw new ArgumentException($"{implementationType} and {serviceType} doesn't Assignable types");
+        }
+
         builder.Register(new TypeBasedServiceDescriptor()
         {
             ImplementationType = implementationType,
@@ -35,24 +40,15 @@ public static class ContainerBuilderExtensions
         return builder;
     }
 
-    public static IContainerBuilder RegisterSingleton(this IContainerBuilder builder, Type @serviceInterface,
-        Type serviceImplementation)
-        => builder.RegisterType(serviceInterface, serviceImplementation, Lifetime.Singleton);
-
-    public static IContainerBuilder RegisterSingleton<TService, TImplementation>(this IContainerBuilder builder) where TImplementation : TService
-        => builder.RegisterType(typeof(TService), typeof(TImplementation), Lifetime.Singleton);
-
+    public static IContainerBuilder RegisterSingleton(this IContainerBuilder builder, Type serviceType, object instance)
+        => builder.RegisterInstance(serviceType, instance);
+    public static IContainerBuilder RegisterSingleton<T>(this IContainerBuilder builder, object instance)
+        => builder.RegisterInstance(typeof(T), instance);
     public static IContainerBuilder RegisterSingleton(this IContainerBuilder builder, Type serviceType, Func<IScope, object> factory)
         => builder.RegisterFactory(serviceType, factory, Lifetime.Singleton);
 
-    public static IContainerBuilder RegisterSingleton<TService>(this IContainerBuilder builder, Func<IScope, TService> factory)
-        => builder.RegisterFactory(typeof(TService), s => factory(s), Lifetime.Singleton);
-
-    public static IContainerBuilder RegisterSingleton(this IContainerBuilder builder, Type serviceType, object instance)
-        => builder.RegisterInstance(serviceType, instance);
-
-    public static IContainerBuilder RegisterSingleton<T>(this IContainerBuilder builder, object instance)
-        => builder.RegisterInstance(typeof(T), instance);
+    public static IContainerBuilder RegisterSingleton<TService>(this IContainerBuilder builder, Func<IScope, object> factory)
+        => builder.RegisterFactory(typeof(TService), factory, Lifetime.Singleton);
 
 
 

@@ -4,47 +4,54 @@ using BenchmarkDotNet.Running;
 using DIContainer;
 using Microsoft.Extensions.DependencyInjection;
 using ContainerBuilder = DIContainer.ContainerBuilder;
-using IContainer = DIContainer.IContainer;
 
 IContainerBuilder builder2 = new ContainerBuilder(new ReflectionBasedActivationBuilder());
 IContainerBuilder builder = new ContainerBuilder(new LambdaBasedActivationBuilder());
 
-var container2 = builder2
-    .RegisterTransient(typeof(Controller), typeof(Controller))
-    .RegisterScoped(typeof(IService), typeof(Service))
-    .RegisterSingleton(typeof(IAnotherService), typeof(AnotherServiceInstance))
-    .Build();
-
 var container = builder
     .RegisterTransient<IService, Service>()
+    .RegisterTransient<IService2>(x => new Service2())
     .RegisterScoped<Controller, Controller>()
+    .RegisterScoped<Controller, Controller>()
+    .RegisterScoped<IHelper>(x => new Helper())
     .RegisterSingleton<IAnotherService>(AnotherServiceInstance.Instance)
+    .RegisterSingleton<IAnotherService>(x => AnotherServiceInstance.Instance)
     .Build();
 
-var scope = container.CreateScope();
-var scope2 = container2.CreateScope();
-var controller1 = scope.Resolve(typeof(Controller));
-var controller2 = scope.Resolve(typeof(Controller));
-var controller3 = scope2.Resolve(typeof(Controller));
-var i1 = scope.Resolve(typeof(IAnotherService));
-var i2 = scope2.Resolve(typeof(IAnotherService));
+var container2 = builder2
+    .RegisterTransient(typeof(Controller), typeof(Controller))
+    .RegisterTransient(typeof(IHelper), x => new Helper())
+    .RegisterScoped(typeof(IService), typeof(Service))
+    .RegisterScoped(typeof(IService), x => new Service())
+    .RegisterScoped(typeof(IService2), typeof(Service2))
+    .RegisterSingleton(typeof(IAnotherService), x => AnotherServiceInstance.Instance)
+    .RegisterSingleton(typeof(IAnotherService), AnotherServiceInstance.Instance)
+    .Build();
 
-if (i1 != i2)
-{
-    throw new InvalidOperationException();
-}
+var scope1 = container.CreateScope();
+var scope2 = container2.CreateScope();
+
+var controller1 = scope1.Resolve(typeof(Controller));
+var controller2 = scope1.Resolve(typeof(IHelper));
+
+var controller3 = scope1.Resolve(typeof(IService));
+var controller4 = scope2.Resolve(typeof(IService));
+
+var controller5 = scope1.Resolve(typeof(IAnotherService));
+var controller6 = scope2.Resolve(typeof(IAnotherService));
 
 if (controller1 != controller2)
-{
-    throw new InvalidOperationException();
-}
+    Console.WriteLine("NOT The Same Types");
 
-if (controller3 != controller2)
-{
-    //throw new InvalidOperationException();
-}
+if (controller3 != controller4)
+    Console.WriteLine("NOT The Same Scope");
 
-//Console.ReadLine();
+if (controller5 == controller6)
+    Console.WriteLine("The Same Instance");
+
+
+//Benchmark (Create new, reflection, lambda(Expression Tree), AutoFac, MS DI)
+//only release config
 
 //BenchmarkRunner.Run<ContainerBenchmark>();
 
@@ -103,17 +110,26 @@ public class ContainerBenchmark
     public Controller MSDI() => _serviceScope.ServiceProvider.GetRequiredService<Controller>();
 }
 
-
-interface IAnotherService
+public class Controller
 {
+    private readonly IService _service;
 
+    public Controller(IService service)
+    {
+        _service = service;
+    }
 }
 
-class AnotherServiceInstance
+//Empty classes just for test
+public class AnotherServiceInstance
 {
     private AnotherServiceInstance() {}
 
     public static AnotherServiceInstance Instance = new();
+}
+public interface IAnotherService
+{
+
 }
 
 public interface IHelper
@@ -136,29 +152,12 @@ public class Service : IService
 
 }
 
-
-class Registration
+public interface IService2
 {
-    public IContainer ConfigureService()
-    {
-        var builder = new ContainerBuilder(new LambdaBasedActivationBuilder());
-        builder.RegisterTransient<IService, Service>();
-        builder.RegisterScoped<Controller, Controller>();
-        return builder.Build();
-    }
+
 }
 
-public class Controller
+public class Service2 : IService2
 {
-    private readonly IService _service;
 
-    public Controller(IService service)
-    {
-        _service = service;
-    }
-
-    public void Do()
-    {
-
-    }
 }
